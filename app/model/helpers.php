@@ -1,5 +1,5 @@
 <?php
-require_once '../../database/database.php';
+require_once '../model/Conexion.php';
 function Pago($tasaInteres, $numPagos, $montoPrestamo)
 {
   // Verificar si la tasa de interés es 0

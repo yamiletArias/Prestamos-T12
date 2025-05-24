@@ -448,16 +448,14 @@
           <td>${c.beneficiario_nombre}</td>
           <td>S/ ${parseFloat(c.monto).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
           <td>${c.interes}%</td>
-          <td>${new Date(c.fechainicio).toLocaleDateString('es-PE')}</td>
+          <td>${(c.fechainicio)}</td>
           <td>${c.numcuotas}</td>
           <td>${estado}</td>
           <td>
-            <button class="btn btn-info btn-sm" onclick="verCronograma(${c.idcontrato})">
+            <button title="Ver cronograma" class="btn btn-info btn-sm" onclick="verCronograma(${c.idcontrato})">
               <i class="fas fa-calendar-alt"></i>
             </button>
-            <button class="btn btn-warning btn-sm" onclick="verPagosContrato(${c.idcontrato})">
-              <i class="fas fa-money-bill-wave"></i>
-            </button>
+
           </td>
         </tr>
       `;
@@ -470,7 +468,6 @@
         console.error('Error al cargar contratos:', error);
       }
     }
-
     async function cargarSelectContratos() {
       try {
         const response = await fetch(API_BASE + 'contrato.controller.php');
@@ -600,14 +597,41 @@
       // 3) Llamo a cargarContratos, que usará ese filtro
       cargarContratos();
     }
+    let modalContrato;
+    let _lastContractBeneficiario = null;
+    async function mostrarModalContrato() {
+      const form = document.getElementById('formContrato');
+      form.reset();
+      form.classList.remove('was-validated');
 
-    function mostrarModalContrato() {
-      alert('Aquí abriríamos un modal para crear contrato');
-    }
+      // 1) Llenar el select de beneficiarios
+      const sel = document.getElementById('selectBeneficiario');
+      sel.innerHTML = '<option value="">Seleccionar beneficiario...</option>';
 
-    function verCronograma(id) {
-      alert('Ver cronograma del contrato ID: ' + id);
+      try {
+        const res = await fetch(API_BASE + 'beneficiario.controller.php');
+        const datos = await res.json();
+        datos.forEach(b => {
+          sel.innerHTML += `
+        <option value="${b.idbeneficiario}">
+          ${b.apellidos} ${b.nombres}
+        </option>`;
+        });
+      } catch (e) {
+        console.error('No se pudo cargar beneficiarios para el contrato', e);
+      }
+
+      // 2) Abrir modal
+      modalContrato.show();
     }
+    document.addEventListener('DOMContentLoaded', () => {
+      // ya tienes el de beneficiario; añadimos éste:
+      modalContrato = new bootstrap.Modal(document.getElementById('modalContrato'));
+    });
+function verCronograma(id) {
+  // Redirige a la página de cronograma, pasando el id del contrato
+  window.location.href = `cronograma.php?id=${id}`;
+}
 
     function verPagosContrato(id) {
       mostrarSeccion('pagos');
@@ -716,6 +740,7 @@
           direccion: document.getElementById('direccion').value
         };
 
+
         fetch(API_BASE + 'beneficiario.controller.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -744,6 +769,73 @@
           });
       });
     }
+
+    async function guardarContrato() {
+      const form = document.getElementById('formContrato');
+      if (!form.checkValidity()) {
+        form.classList.add('was-validated');
+        return;
+      }
+
+      // Recogemos datos del formulario
+      const datos = {
+        idbeneficiario: document.getElementById('selectBeneficiario').value,
+        monto: document.getElementById('monto').value,
+        interes: document.getElementById('interes').value,
+        fechainicio: document.getElementById('fechainicio').value,
+        numcuotas: document.getElementById('numcuotas').value
+      };
+
+      // Chequeo en el backend si ya hay contratos activos
+      const resp = await fetch(
+        `${API_BASE}contrato.controller.php?check=1&beneficiario=${datos.idbeneficiario}`
+      );
+      const { count } = await resp.json();
+
+      // Función interna para enviar el POST
+      const doPost = () => {
+        fetch(API_BASE + 'contrato.controller.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(datos)
+        })
+          .then(r => r.json())
+          .then(res => {
+            if (res.success) {
+              modalContrato.hide();
+              cargarContratos();
+              Swal.fire({
+                icon: 'success',
+                title: 'Contrato creado',
+                showConfirmButton: false,
+                timer: 1400
+              });
+            } else {
+              Swal.fire('Error', res.error, 'error');
+            }
+          })
+          .catch(() => {
+            Swal.fire('Error', 'Problema de conexión', 'error');
+          });
+      };
+
+      // Si ya existe al menos un contrato activo, pedimos confirmación
+      if (count > 0) {
+        Swal.fire({
+          title: '¡Atención!',
+          text: 'Este beneficiario ya tiene un contrato activo. ¿Deseas continuar?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, continuar',
+          cancelButtonText: 'Cancelar'
+        }).then(({ isConfirmed }) => {
+          if (isConfirmed) doPost();
+        });
+      } else {
+        doPost();
+      }
+    }
+    
   </script>
 </body>
 
