@@ -184,6 +184,7 @@
           <div id="estadisticasPagos" class="row mt-3 p-3 bg-light" style="display:none;">
             <!-- Se llenará dinámicamente -->
           </div>
+          <div id="cronogramaContrato" class="mt-4"></div>
         </div>
       </section>
     </div>
@@ -306,60 +307,6 @@
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="button" class="btn btn-primary" onclick="guardarContrato()">
             <i class="fas fa-save me-1"></i> Crear Contrato
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Pago -->
-  <div class="modal fade" id="modalPago" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            <i class="fas fa-money-bill-wave me-2"></i>
-            Registrar Pago
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="formPago">
-            <input type="hidden" id="pagoContrato">
-            <input type="hidden" id="pagoNumCuota">
-            <div class="mb-3">
-              <div class="form-floating">
-                <input type="number" class="form-control" id="pagoMonto" step="0.01" readonly>
-                <label>Monto de la Cuota (S/)</label>
-              </div>
-            </div>
-            <div class="mb-3">
-              <div class="form-floating">
-                <input type="number" class="form-control" id="pagoPenalidad" step="0.01" min="0" value="0">
-                <label>Penalidad (S/)</label>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Medio de Pago *</label>
-              <select class="form-select" id="pagoMedio" required>
-                <option value="">Seleccionar...</option>
-                <option value="EFC">Efectivo</option>
-                <option value="DEP">Depósito Bancario</option>
-                <option value="TRF">Transferencia</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <div class="form-floating">
-                <input type="date" class="form-control" id="pagoFecha" required>
-                <label>Fecha de Pago *</label>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-success" onclick="confirmarPago()">
-            <i class="fas fa-check me-1"></i> Registrar Pago
           </button>
         </div>
       </div>
@@ -576,6 +523,16 @@
       } catch (error) {
         console.error('Error al cargar pagos:', error);
       }
+      try {
+        const cronogramaRes = await fetch(`cronograma.php?id=${contratoId}`);
+        if (!cronogramaRes.ok) throw new Error(`HTTP ${cronogramaRes.status}`);
+        const cronogramaHtml = await cronogramaRes.text();
+        document.getElementById('cronogramaContrato').innerHTML = cronogramaHtml;
+      } catch (e) {
+        console.error('Error al cargar cronograma:', e);
+        document.getElementById('cronogramaContrato').innerHTML =
+          `<div class="alert alert-warning">No se pudo cargar el cronograma.</div>`;
+      }
     }
 
     // Funciones de acción (placeholders)
@@ -628,10 +585,10 @@
       // ya tienes el de beneficiario; añadimos éste:
       modalContrato = new bootstrap.Modal(document.getElementById('modalContrato'));
     });
-function verCronograma(id) {
-  // Redirige a la página de cronograma, pasando el id del contrato
-  window.location.href = `cronograma.php?id=${id}`;
-}
+    function verCronograma(id) {
+      // Redirige a la página de cronograma, pasando el id del contrato
+      window.location.href = `cronograma.php?id=${id}`;
+    }
 
     function verPagosContrato(id) {
       mostrarSeccion('pagos');
@@ -835,7 +792,7 @@ function verCronograma(id) {
         doPost();
       }
     }
-    
+
   </script>
 </body>
 
