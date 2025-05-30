@@ -1,13 +1,13 @@
 <?php
-// cronograma.php (URL absoluta y fetch simplificado)
+// cronograma.php
 require_once __DIR__ . '/app/model/Conexion.php';
 
 $conexion = new Conexion();
 $pdo = $conexion->conectar();
 if (!$pdo)
-    die('No hay conexión a BD');
+  die('No hay conexión a BD');
 if (!isset($_GET['id']) || !ctype_digit($_GET['id']))
-    die('Contrato inválido');
+  die('Contrato inválido');
 $idContrato = (int) $_GET['id'];
 
 // Ruta al controlador de pagos
@@ -16,33 +16,36 @@ $pagosUrl = $basePath . '/app/controller/pagos.php';
 
 // Datos del contrato
 $stmt = $pdo->prepare(
-    "SELECT c.*, b.apellidos, b.nombres FROM contratos c JOIN beneficiarios b USING(idbeneficiario) WHERE idcontrato = ?"
+  "SELECT c.*, b.apellidos, b.nombres FROM contratos c JOIN beneficiarios b USING(idbeneficiario) WHERE idcontrato = ?"
 );
 $stmt->execute([$idContrato]);
 $contrato = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$contrato)
-    die('Contrato no encontrado');
+  die('Contrato no encontrado');
 
 // Pagos
 $stmt = $pdo->prepare(
-    "SELECT p.numcuota, DATE_ADD(c.fechainicio, INTERVAL (p.numcuota-1) MONTH) AS fecha_programada,
+  "SELECT p.numcuota, DATE_ADD(c.fechainicio, INTERVAL (p.numcuota-1) MONTH) AS fecha_programada,
             p.monto, p.penalidad, p.fechapago, p.medio
-     FROM pagos p JOIN contratos c USING(idcontrato)
-     WHERE p.idcontrato = ? ORDER BY p.numcuota"
+              FROM pagos p JOIN contratos c USING(idcontrato)
+              WHERE p.idcontrato = ? ORDER BY p.numcuota"
 );
 $stmt->execute([$idContrato]);
 $pagos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <title>Cronograma #<?= $idContrato ?></title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body>
   <div class="container py-4">
-    <h2>Cronograma de Pagos — Contrato #<?= $idContrato ?> <small class="text-muted"><?= htmlspecialchars($contrato['apellidos'] . ' ' . $contrato['nombres']) ?></small></h2>
+    <h2>Cronograma de Pagos — Contrato #<?= $idContrato ?> <small
+        class="text-muted"><?= htmlspecialchars($contrato['apellidos'] . ' ' . $contrato['nombres']) ?></small></h2>
 
     <?php if (count($pagos) === 0): ?>
       <div class="alert alert-info mt-3">No hay pagos realizados para este contrato.</div>
@@ -64,25 +67,27 @@ $pagos = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <?php foreach ($pagos as $p):
             $pagada = !empty($p['fechapago']);
             $medio = $p['medio'] === 'EFC' ? 'Efectivo' : ($p['medio'] === 'DEP' ? 'Depósito' : '-');
-          ?>
-          <tr class="<?= $pagada ? 'table-success' : '' ?>">
-            <td><?= $p['numcuota'] ?></td>
-            <td><?= date('d/m/Y', strtotime($p['fecha_programada'])) ?></td>
-            <td><?= number_format($p['monto'], 2) ?></td>
-            <td><?= number_format($p['penalidad'], 2) ?></td>
-            <td><?= $medio ?></td>
-            <td><?= $pagada ? date('d/m/Y', strtotime($p['fechapago'])) : '-' ?></td>
-            <td><?= $pagada ? '<span class="badge bg-success">PAGADA</span>' : '<span class="badge bg-warning text-dark">PENDIENTE</span>' ?></td>
-            <td>
-              <?php if (!$pagada): ?>
-                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalPago"
-                  data-num="<?= $p['numcuota'] ?>" data-fecha="<?= date('Y-m-d', strtotime($p['fecha_programada'])) ?>"
-                  data-monto="<?= $p['monto'] ?>">Pagar</button>
-              <?php else: ?>
-                <button class="btn btn-secondary btn-sm" disabled>Pagada</button>
-              <?php endif; ?>
-            </td>
-          </tr>
+            ?>
+            <tr class="<?= $pagada ? 'table-success' : '' ?>">
+              <td><?= $p['numcuota'] ?></td>
+              <td><?= date('d/m/Y', strtotime($p['fecha_programada'])) ?></td>
+              <td><?= number_format($p['monto'], 2) ?></td>
+              <td><?= number_format($p['penalidad'], 2) ?></td>
+              <td><?= $medio ?></td>
+              <td><?= $pagada ? date('d/m/Y', strtotime($p['fechapago'])) : '-' ?></td>
+              <td>
+                <?= $pagada ? '<span class="badge bg-success">PAGADA</span>' : '<span class="badge bg-warning text-dark">PENDIENTE</span>' ?>
+              </td>
+              <td>
+                <?php if (!$pagada): ?>
+                  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalPago"
+                    data-num="<?= $p['numcuota'] ?>" data-fecha="<?= date('Y-m-d', strtotime($p['fecha_programada'])) ?>"
+                    data-monto="<?= $p['monto'] ?>">Pagar</button>
+                <?php else: ?>
+                  <button class="btn btn-secondary btn-sm" disabled>Pagada</button>
+                <?php endif; ?>
+              </td>
+            </tr>
           <?php endforeach; ?>
         </tbody>
       </table>
@@ -109,7 +114,8 @@ $pagos = $stmt->fetchAll(PDO::FETCH_ASSOC);
               </select>
             </div>
           </div>
-          <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button id="btnSave" class="btn btn-success">Guardar</button></div>
+          <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button
+              id="btnSave" class="btn btn-success">Guardar</button></div>
         </div>
       </div>
     </div>
@@ -134,7 +140,7 @@ $pagos = $stmt->fetchAll(PDO::FETCH_ASSOC);
       document.getElementById('montoCuota').value = monto.toFixed(2);
       const hoy = new Date();
       document.getElementById('penalidad').value = (hoy > prog ? monto * 0.10 : 0).toFixed(2);
-      document.getElementById('fechaPago').value = hoy.toISOString().slice(0,10);
+      document.getElementById('fechaPago').value = hoy.toISOString().slice(0, 10);
       document.getElementById('medioPago').value = 'EFC';
     });
 
@@ -192,4 +198,5 @@ $pagos = $stmt->fetchAll(PDO::FETCH_ASSOC);
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 </body>
+
 </html>

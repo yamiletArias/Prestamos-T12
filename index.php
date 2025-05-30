@@ -162,14 +162,13 @@
             <table class="table table-hover mb-0">
               <thead class="table-light">
                 <tr>
-                  <th>Cuota</th>
+                  <!-- <th>Cuota</th>
                   <th>Fecha Programada</th>
                   <th>Fecha Pago</th>
                   <th>Monto</th>
                   <th>Penalidad</th>
-                  <th>Medio</th>
                   <th>Estado</th>
-                  <th>Acciones</th>
+                  <th>Acciones</th> -->
                 </tr>
               </thead>
               <tbody id="tablaPagos">
@@ -317,7 +316,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
     const API_BASE = './app/controller/';
-
+    const pagosUrl = API_BASE + 'pagos.php';
     // Funciones de navegación
     function mostrarSeccion(seccion) {
       document.querySelectorAll('.seccion').forEach(s => s.style.display = 'none');
@@ -450,80 +449,87 @@
 
         const tbody = document.getElementById('tablaPagos');
         tbody.innerHTML = '';
-
         pagos.forEach(p => {
-          const fechaPago = p.fechapago ? new Date(p.fechapago).toLocaleDateString('es-PE') : '-';
-          const medio = p.medio ? (p.medio === 'EFC' ? 'EFECTIVO' : 'DEPÓSITO') : '-';
-          const estado = p.fechapago ?
-            '<span class="badge bg-success">PAGADO</span>' :
-            '<span class="badge bg-danger">PENDIENTE</span>';
-
+          // Datos bien nombrados
+          const fechaProg = p.fecha_programada;
+          const fechaPago = p.fechapago
+            ? new Date(p.fechapago).toLocaleDateString('es-PE')
+            : '-';
+          const monto = parseFloat(p.monto).toFixed(2);
+          const medio = p.medio
+            ? (p.medio === 'EFC' ? 'EFECTIVO' : 'DEPÓSITO')
+            : '-';
+          const estado = p.fechapago
+            ? '<span class="badge bg-success">PAGADO</span>'
+            : '<span class="badge bg-danger">PENDIENTE</span>';
           const claseFila = p.fechapago ? 'table-success' : '';
 
           tbody.innerHTML += `
-                        <tr class="${claseFila}">
-                            <td>${p.numcuota}</td>
-                            <td>${fechaPago}</td>
-                            <td>S/ ${parseFloat(p.monto).toFixed(2)}</td>
-                            <td>S/ ${parseFloat(p.penalidad).toFixed(2)}</td>
-                            <td>${medio}</td>
-                            <td>${estado}</td>
-                            <td>
-                                ${!p.fechapago ?
-              `<button class="btn btn-success btn-sm" onclick="registrarPago(${contratoId}, ${p.numcuota})">
-                                        <i class="fas fa-money-bill-wave"></i> Pagar
-                                    </button>` :
-              `<button class="btn btn-info btn-sm" onclick="verDetallePago(${p.idpago})">
-                                        <i class="fas fa-eye"></i>
-                                    </button>`
-            }
-                            </td>
-                        </tr>
-                    `;
+              <tr class="${claseFila}">
+                <td>${p.numcuota}</td>
+                <td>${new Date(fechaProg).toLocaleDateString('es-PE')}</td>
+                <td>${fechaPago}</td>
+                <td>S/ ${monto}</td>
+                <td>S/ ${parseFloat(p.penalidad).toFixed(2)}</td>
+                <td>${medio}</td>
+                <td>${estado}</td>
+                <td>
+                  ${!p.fechapago
+                    ? `<button class="btn btn-success btn-sm"
+                        onclick="registrarPago(${contratoId}, ${p.numcuota}, '${fechaProg}', ${monto})">
+                      Pagar
+                    </button>`
+                    : `<button class="btn btn-info btn-sm" onclick="verDetallePago(${p.idpago})">Ver</button>`
+                  }
+                </td>
+              </tr>
+            `;
         });
 
         // Mostrar estadísticas
         const divEstadisticas = document.getElementById('estadisticasPagos');
         divEstadisticas.style.display = 'block';
         divEstadisticas.innerHTML = `
-                    <div class="col-md-3">
-                        <div class="card text-center border-primary">
-                            <div class="card-body">
-                                <h6 class="card-title">Cuotas Pagadas</h6>
-                                <h4 class="text-primary">${estadisticas.cuotas_pagadas}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-center border-danger">
-                            <div class="card-body">
-                                <h6 class="card-title">Cuotas Pendientes</h6>
-                                <h4 class="text-danger">${estadisticas.cuotas_pendientes}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-center border-success">
-                            <div class="card-body">
-                                <h6 class="card-title">Total Pagado</h6>
-                                <h4 class="text-success">S/ ${parseFloat(estadisticas.total_pagado || 0).toFixed(2)}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-center border-warning">
-                            <div class="card-body">
-                                <h6 class="card-title">Penalidades</h6>
-                                <h4 class="text-warning">S/ ${parseFloat(estadisticas.total_penalidades || 0).toFixed(2)}</h4>
-                            </div>
-                        </div>
-                    </div>
-                `;
+          <div class="row row-cols-1 row-cols-md-4 g-3">
+            <div class="col">
+              <div class="card text-center border-primary">
+                <div class="card-body">
+                  <h6 class="card-title">Cuotas Pagadas</h6>
+                  <h4 class="text-primary">${estadisticas.cuotas_pagadas}</h4>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card text-center border-danger">
+                <div class="card-body">
+                  <h6 class="card-title">Cuotas Pendientes</h6>
+                  <h4 class="text-danger">${estadisticas.cuotas_pendientes}</h4>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card text-center border-success">
+                <div class="card-body">
+                  <h6 class="card-title">Total Pagado</h6>
+                  <h4 class="text-success">S/ ${parseFloat(estadisticas.total_pagado || 0).toFixed(2)}</h4>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card text-center border-warning">
+                <div class="card-body">
+                  <h6 class="card-title">Penalidades</h6>
+                  <h4 class="text-warning">S/ ${parseFloat(estadisticas.total_penalidades || 0).toFixed(2)}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
 
       } catch (error) {
         console.error('Error al cargar pagos:', error);
       }
-      try {
+      /* try {
         const cronogramaRes = await fetch(`cronograma.php?id=${contratoId}`);
         if (!cronogramaRes.ok) throw new Error(`HTTP ${cronogramaRes.status}`);
         const cronogramaHtml = await cronogramaRes.text();
@@ -532,7 +538,7 @@
         console.error('Error al cargar cronograma:', e);
         document.getElementById('cronogramaContrato').innerHTML =
           `<div class="alert alert-warning">No se pudo cargar el cronograma.</div>`;
-      }
+      } */
     }
 
     // Funciones de acción (placeholders)
@@ -596,31 +602,54 @@
       cargarPagos();
     }
 
-    async function registrarPago(contratoId, numCuota) {
-      const medio = prompt('Medio de pago (EFC/DEP):');
-      const penalidad = parseFloat(prompt('Penalidad (0 si no hay):') || 0);
+    async function registrarPago(contratoId, numCuota, fechaProg, monto) {
+      const hoy = new Date();
+      const hoyStr = hoy.toISOString().slice(0, 10);
+      // Calcular penalidad automática
+      const penalidad = hoy > new Date(fechaProg)
+        ? parseFloat((monto * 0.10).toFixed(2))
+        : 0;
+
+      const { value: form } = await Swal.fire({
+        title: `Pagar cuota ${numCuota}`,
+        html:
+          `<p>Monto: <strong>S/ ${monto}</strong></p>
+       <p>Fecha programada: <strong>${new Date(fechaProg).toLocaleDateString('es-PE')}</strong></p>
+       <input id="swal-fecha" type="date" class="swal2-input" value="${hoyStr}" />
+       <input id="swal-penalidad" type="number" min="0" step="0.01"
+              class="swal2-input" value="${penalidad.toFixed(2)}"
+              placeholder="Penalidad (S/)" />`,
+        focusConfirm: false,
+        showCancelButton: true,
+        preConfirm: () => ({
+          fecha: document.getElementById('swal-fecha').value,
+          penalidad: parseFloat(document.getElementById('swal-penalidad').value) || 0
+        })
+      });
+
+      if (!form) return; // Canceló
 
       try {
-        const response = await fetch(API_BASE + 'pagos.php', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch(pagosUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-HTTP-Method-Override': 'PUT'
+          },
           body: JSON.stringify({
             idcontrato: contratoId,
             numcuota: numCuota,
-            medio: medio,
-            penalidad: penalidad
+            fechapago: form.fecha,
+            penalidad: form.penalidad,
+            medio: 'EFC'    // o nếu quieres permitir cambiar, añádelo al modal
           })
         });
-
-        const resultado = await response.json();
-        if (resultado.success) {
-          alert('Pago registrado exitosamente');
-          cargarPagos();
-        } else {
-          alert('Error: ' + resultado.error);
-        }
-      } catch (error) {
-        console.error('Error al registrar pago:', error);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        await Swal.fire('¡Listo!', 'Pago registrado.', 'success');
+        cargarPagos();
+      } catch (e) {
+        Swal.fire('Error', e.message, 'error');
       }
     }
 

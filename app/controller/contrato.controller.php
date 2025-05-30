@@ -8,8 +8,11 @@ require_once __DIR__ . '/../model/Conexion.php';
 require_once __DIR__ . '/../model/Contrato.php';
 
 $db = (new Conexion())->conectar();
-if (!$db)
+if (!$db) {
+  http_response_code(500);
+  echo json_encode(['error' => 'No hay conexión a BD']);
   exit;
+}
 
 $model = new Contrato($db);
 $method = $_SERVER['REQUEST_METHOD'];
@@ -47,6 +50,7 @@ try {
   } elseif ($method === 'POST') {
     // Crear nuevo contrato
     $data = json_decode(file_get_contents('php://input'), true);
+
     // Validaciones básicas
     if (
       empty($data['idbeneficiario']) ||
@@ -58,7 +62,50 @@ try {
       throw new Exception('Faltan datos obligatorios');
     }
 
+    // 1) Insertar el contrato
     $newId = $model->create($data);
+
+    // 2) Generar el cronograma de pagos
+    $db->beginTransaction();
+    try {
+      $fechaInicio = new DateTime($data['fechainicio']);
+      $principal = (float) $data['monto'];
+      $interesAnual = (float) $data['interes'] / 100;
+      $cuotas = (int) $data['numcuotas'];
+
+      // Cálculo de cuota fija (amortización francesa)
+      $tasaMensual = $interesAnual / 12;
+      if ($tasaMensual > 0) {
+        $factor = ($tasaMensual * pow(1 + $tasaMensual, $cuotas))
+          / (pow(1 + $tasaMensual, $cuotas) - 1);
+        $cuotaFija = $principal * $factor;
+      } else {
+        $cuotaFija = $principal / $cuotas;
+      }
+
+      // Inserción en pagos sin fecha_programada (se calcula luego con DATE_ADD)
+      $stmtPago = $db->prepare(
+        "INSERT INTO pagos
+                (idcontrato, numcuota, monto, penalidad, fechapago, medio)
+                VALUES
+                (?, ?, ?, 0, NULL, NULL)"
+      );
+
+      for ($i = 1; $i <= $cuotas; $i++) {
+        $stmtPago->execute([
+          $newId,
+          $i,
+          number_format($cuotaFija, 2, '.', '')
+        ]);
+      }
+
+      $db->commit();
+    } catch (Throwable $e) {
+      $db->rollBack();
+      throw new Exception('No se pudo generar el cronograma');
+    }
+
+    // 3) Responder al frontend
     echo json_encode(['success' => true, 'id' => $newId]);
 
   } elseif ($method === 'PUT') {
