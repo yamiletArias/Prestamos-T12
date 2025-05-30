@@ -16,5 +16,8 @@
     "url": "https://github.com/yamiletArias/Prestamos-T12/issues"
   },
   "homepage": "https://github.com/yamiletArias/Prestamos-T12#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
 }

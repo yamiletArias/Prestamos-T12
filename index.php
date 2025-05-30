@@ -335,7 +335,7 @@
       const tbody = document.getElementById('tablaBeneficiarios');
       tbody.innerHTML = '<tr><td colspan="7" class="loading">Cargando beneficiarios...</td></tr>';
       try {
-        const res = await fetch(API_BASE + 'beneficiario.controller.php');
+        const res = await fetch(API_BASE + 'beneficiario.controller.php', { method: 'GET' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const datos = await res.json();
         if (datos.error) throw new Error(datos.error);
@@ -475,12 +475,12 @@
                 <td>${estado}</td>
                 <td>
                   ${!p.fechapago
-                    ? `<button class="btn btn-success btn-sm"
+              ? `<button class="btn btn-success btn-sm"
                         onclick="registrarPago(${contratoId}, ${p.numcuota}, '${fechaProg}', ${monto})">
                       Pagar
                     </button>`
-                    : `<button class="btn btn-info btn-sm" onclick="verDetallePago(${p.idpago})">Ver</button>`
-                  }
+              : `<button class="btn btn-info btn-sm" onclick="verDetallePago(${p.idpago})">Ver</button>`
+            }
                 </td>
               </tr>
             `;
@@ -598,7 +598,7 @@
 
     function verPagosContrato(id) {
       mostrarSeccion('pagos');
-      document.getElementById('selectContrato').value = id;
+      document.getElementById('selectContrato').value  = id;
       cargarPagos();
     }
 
